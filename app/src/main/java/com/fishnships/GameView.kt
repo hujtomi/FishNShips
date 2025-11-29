@@ -54,6 +54,18 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     }
     private var scoreUpdateCounter = 0L
 
+    private var isGameOver = false
+    private val gameOverPaint = Paint().apply {
+        color = Color.RED
+        textSize = 100f
+        textAlign = Paint.Align.CENTER
+    }
+    private val restartTextPaint = Paint().apply {
+        color = Color.BLACK
+        textSize = 60f
+        textAlign = Paint.Align.CENTER
+    }
+
     // Game loop
     private var gameThread: Thread? = null
     private var isRunning = false
@@ -78,6 +90,11 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
         // Draw score
         canvas.drawText("Score: $score", 50f, 100f, scorePaint)
+
+        if (isGameOver) {
+            canvas.drawText("Game Over", screenWidth / 2f, screenHeight / 2f, gameOverPaint)
+            canvas.drawText("Tap to restart", screenWidth / 2f, screenHeight / 2f + 120, restartTextPaint)
+        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -95,6 +112,7 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         ships.clear()
         nets.clear()
         score = 0
+        scoreUpdateCounter = 0L
         // Initialize ships
         for (i in 0..2) {
             val shipX = screenWidth + i * 500f + Random.nextInt(300)
@@ -111,6 +129,14 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (isGameOver) {
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                isGameOver = false
+                initObstacles()
+            }
+            return true
+        }
+
         when (event.action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
                 isUserTouching = true
@@ -147,7 +173,29 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         }
     }
 
+    private fun checkCollisions() {
+        val fishRect = RectF(fishX - fishRadius, fishY - fishRadius, fishX + fishRadius, fishY + fishRadius)
+
+        // Ship collision
+        ships.forEach {
+            if (RectF.intersects(it, fishRect)) {
+                isGameOver = true
+                return
+            }
+        }
+
+        // Net collision
+        nets.forEach {
+            if (RectF.intersects(it, fishRect)) {
+                isGameOver = true
+                return
+            }
+        }
+    }
+
     private fun update() {
+        if (isGameOver) return
+
         if (!isUserTouching) {
             // Update fish position for sine wave movement
             angle += frequency
@@ -183,5 +231,7 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         if (scoreUpdateCounter % 6 == 0L) {
             score++
         }
+
+        checkCollisions()
     }
 }
