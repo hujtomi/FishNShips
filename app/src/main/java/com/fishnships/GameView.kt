@@ -4,10 +4,12 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import kotlin.math.sin
+import kotlin.random.Random
 
 class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
@@ -28,6 +30,30 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private var amplitude = 100f
     private val frequency = 0.05
 
+    // Ship properties
+    private val ships = mutableListOf<RectF>()
+    private val shipPaint = Paint().apply { color = Color.DKGRAY }
+    private val shipWidth = 200f
+    private val shipHeight = 100f
+
+    // Net properties
+    private val nets = mutableListOf<RectF>()
+    private val netPaint = Paint().apply { color = Color.BLACK }
+    private val netWidth = 150f
+    private val netHeight = 80f
+
+    // Obstacle speed
+    private val obstacleSpeed = 10f
+
+    // Score
+    private var score = 0
+    private val scorePaint = Paint().apply {
+        color = Color.BLACK
+        textSize = 60f
+        textAlign = Paint.Align.LEFT
+    }
+    private var scoreUpdateCounter = 0L
+
     // Game loop
     private var gameThread: Thread? = null
     private var isRunning = false
@@ -41,8 +67,17 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         // Draw background
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
 
+        // Draw nets
+        nets.forEach { canvas.drawRect(it, netPaint) }
+
         // Draw fish
         canvas.drawCircle(fishX, fishY, fishRadius, fishPaint)
+
+        // Draw ships
+        ships.forEach { canvas.drawRect(it, shipPaint) }
+
+        // Draw score
+        canvas.drawText("Score: $score", 50f, 100f, scorePaint)
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -52,6 +87,27 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         fishX = screenWidth / 4f
         fishY = screenHeight / 2f
         amplitude = h / 4f
+
+        initObstacles()
+    }
+
+    private fun initObstacles() {
+        ships.clear()
+        nets.clear()
+        score = 0
+        // Initialize ships
+        for (i in 0..2) {
+            val shipX = screenWidth + i * 500f + Random.nextInt(300)
+            val shipY = Random.nextFloat() * (screenHeight / 5f)
+            ships.add(RectF(shipX, shipY, shipX + shipWidth, shipY + shipHeight))
+        }
+
+        // Initialize nets
+        for (i in 0..2) {
+            val netX = screenWidth + i * 500f + Random.nextInt(300)
+            val netY = screenHeight - (Random.nextFloat() * (screenHeight / 5f)) - netHeight
+            nets.add(RectF(netX, netY, netX + netWidth, netY + netHeight))
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -97,6 +153,35 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             angle += frequency
             fishY = (screenHeight / 2f) + (amplitude * sin(angle)).toFloat()
         }
-        // In the future, we will update other game objects here
+
+        // Update ships
+        ships.forEach { ship ->
+            ship.left -= obstacleSpeed
+            ship.right -= obstacleSpeed
+            if (ship.right < 0) {
+                ship.left = screenWidth.toFloat() + Random.nextInt(500)
+                ship.right = ship.left + shipWidth
+                ship.top = Random.nextFloat() * (screenHeight / 5f)
+                ship.bottom = ship.top + shipHeight
+            }
+        }
+
+        // Update nets
+        nets.forEach { net ->
+            net.left -= obstacleSpeed
+            net.right -= obstacleSpeed
+            if (net.right < 0) {
+                net.left = screenWidth.toFloat() + Random.nextInt(500)
+                net.right = net.left + netWidth
+                net.top = screenHeight - (Random.nextFloat() * (screenHeight / 5f)) - netHeight
+                net.bottom = net.top + netHeight
+            }
+        }
+
+        // Update score - every 100ms (roughly 6 frames at 60fps)
+        scoreUpdateCounter++
+        if (scoreUpdateCounter % 6 == 0L) {
+            score++
+        }
     }
 }
