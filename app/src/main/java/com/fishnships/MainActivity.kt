@@ -1,9 +1,9 @@
 package com.fishnships
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
     private lateinit var gameView: GameView
 
     override fun onCreate(savedInstanceState: Bundle?) {
