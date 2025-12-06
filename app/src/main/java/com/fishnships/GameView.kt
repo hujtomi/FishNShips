@@ -35,8 +35,8 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     // Ship properties
     private val ships = mutableListOf<RectF>()
-    private val shipPaint = Paint().apply { color = Color.DKGRAY }
-    private val shipWidth = 200f
+    // private val shipPaint = Paint().apply { color = Color.DKGRAY } // No longer needed
+    private val shipWidth = 275f
     private val shipHeight = 100f
 
     // Net properties
@@ -48,6 +48,9 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     // IMAGE HANDLING: The Net Bitmap
     private var netBitmap: Bitmap
+
+    // IMAGE HANDLING: The Ship Bitmap
+    private var shipBitmap: Bitmap
 
     // Obstacle speed
     private val obstacleSpeed = 10f
@@ -84,11 +87,17 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     init {
         // Load the raw bitmap from resources
         // Make sure you have a file named 'fishnet.png' in res/drawable
-        val rawBitmap = BitmapFactory.decodeResource(resources, R.drawable.fishnet)
+        val rawFishNetBitmap = BitmapFactory.decodeResource(resources, R.drawable.fishnet)
 
         // Scale it to match the logical size of our obstacles (netWidth x netHeight)
         // This ensures the image fits the hit-box exactly
-        netBitmap = rawBitmap.scale(netWidth.toInt(), netHeight.toInt())
+        netBitmap = rawFishNetBitmap.scale(netWidth.toInt(), netHeight.toInt())
+
+        // Load the ship bitmap
+        val rawShipBitmap = BitmapFactory.decodeResource(resources, R.drawable.ship)
+
+        // Scale the ship to match shipWidth x shipHeight
+        shipBitmap = rawShipBitmap.scale(shipWidth.toInt(), shipHeight.toInt())
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -107,7 +116,10 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         canvas.drawCircle(fishX, fishY, fishRadius, fishPaint)
 
         // Draw ships
-        ships.forEach { canvas.drawRect(it, shipPaint) }
+        ships.forEach { rect ->
+            // Draw the ship bitmap
+            canvas.drawBitmap(shipBitmap, rect.left, rect.top, null)
+        }
 
         // Draw score
         canvas.drawText("Score: $score", 50f, 100f, scorePaint)
