@@ -1,6 +1,8 @@
 package com.fishnships
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -10,6 +12,7 @@ import android.view.MotionEvent
 import android.view.View
 import kotlin.math.sin
 import kotlin.random.Random
+import androidx.core.graphics.scale
 
 class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
@@ -38,9 +41,13 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     // Net properties
     private val nets = mutableListOf<RectF>()
-    private val netPaint = Paint().apply { color = Color.BLACK }
-    private val netWidth = 150f
-    private val netHeight = 80f
+    // We don't need netPaint for drawing anymore, but keeping it for debugging bounding boxes is okay
+    // private val netPaint = Paint().apply { color = Color.BLACK }
+    private val netWidth = 160f
+    private val netHeight = 160f
+
+    // IMAGE HANDLING: The Net Bitmap
+    private var netBitmap: Bitmap
 
     // Obstacle speed
     private val obstacleSpeed = 10f
@@ -74,13 +81,27 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     private var isUserTouching = false
 
+    init {
+        // Load the raw bitmap from resources
+        // Make sure you have a file named 'fishnet.png' in res/drawable
+        val rawBitmap = BitmapFactory.decodeResource(resources, R.drawable.fishnet)
+
+        // Scale it to match the logical size of our obstacles (netWidth x netHeight)
+        // This ensures the image fits the hit-box exactly
+        netBitmap = rawBitmap.scale(netWidth.toInt(), netHeight.toInt())
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         // Draw background
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
 
         // Draw nets
-        nets.forEach { canvas.drawRect(it, netPaint) }
+        nets.forEach { rect ->
+            // Draw the bitmap at the rect's coordinates.
+            // We use null for the paint because the bitmap has its own colors.
+            canvas.drawBitmap(netBitmap, rect.left, rect.top, null)
+        }
 
         // Draw fish
         canvas.drawCircle(fishX, fishY, fishRadius, fishPaint)
@@ -167,7 +188,7 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             try {
                 gameThread?.join()
                 retry = false
-            } catch (e: InterruptedException) {
+            } catch (_: InterruptedException) {
                 // Try again
             }
         }
