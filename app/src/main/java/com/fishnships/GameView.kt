@@ -23,9 +23,10 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     // Fish properties
     private var fishX: Float = 0f
     private var fishY: Float = 0f
-    private val fishRadius = 50f
+    private val fishWidth = 100f  // Wider
+    private val fishHeight = 60f  // Shorter (to make an oval)
     private val fishPaint = Paint().apply {
-        color = Color.YELLOW // Fish color
+        color = Color.GRAY // Changed from YELLOW to GRAY
     }
 
     // Sine wave properties
@@ -113,7 +114,13 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         }
 
         // Draw fish
-        canvas.drawCircle(fishX, fishY, fishRadius, fishPaint)
+        val fishOval = RectF(
+            fishX - fishWidth / 2,
+            fishY - fishHeight / 2,
+            fishX + fishWidth / 2,
+            fishY + fishHeight / 2
+        )
+        canvas.drawOval(fishOval, fishPaint)
 
         // Draw ships
         ships.forEach { rect ->
@@ -207,7 +214,12 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     }
 
     private fun checkCollisions() {
-        val fishRect = RectF(fishX - fishRadius, fishY - fishRadius, fishX + fishRadius, fishY + fishRadius)
+        val fishRect = RectF(
+            fishX - fishWidth / 2,
+            fishY - fishHeight / 2,
+            fishX + fishWidth / 2,
+            fishY + fishHeight / 2
+        )
 
         // Ship collision
         ships.forEach {
