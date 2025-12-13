@@ -6,10 +6,12 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import kotlin.math.atan2
 import kotlin.math.sin
 import kotlin.random.Random
 import androidx.core.graphics.scale
@@ -28,6 +30,11 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private val fishPaint = Paint().apply {
         color = Color.GRAY // Changed from YELLOW to GRAY
     }
+
+    // Tail properties
+    private val tailPath = Path()
+    private var fishRotation = 0f
+    private var tailWagAngle = 0.0
 
     // Sine wave properties
     private var angle = 0.0
@@ -114,13 +121,41 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         }
 
         // Draw fish
-        val fishOval = RectF(
-            fishX - fishWidth / 2,
-            fishY - fishHeight / 2,
-            fishX + fishWidth / 2,
-            fishY + fishHeight / 2
+        canvas.save()
+        canvas.translate(fishX, fishY)
+        canvas.rotate(fishRotation) // Points fish in direction of heading
+
+        // Draw body (centered at 0,0 relative to translation)
+        val bodyOval = RectF(
+            -fishWidth / 2,
+            -fishHeight / 2,
+            fishWidth / 2,
+            fishHeight / 2
         )
-        canvas.drawOval(fishOval, fishPaint)
+        canvas.drawOval(bodyOval, fishPaint)
+
+        // Draw tail
+        // Calculate tail wag rotation
+        val currentWag = (30f * sin(tailWagAngle)).toFloat()
+
+        canvas.save()
+        // Move to the back of the fish (left side)
+        canvas.translate(-fishWidth / 2, 0f)
+        canvas.rotate(currentWag)
+
+        // Define triangle tail
+        val tailLen = 60f
+        val tailHalfH = 40f
+        tailPath.reset()
+        tailPath.moveTo(0f, 0f) // Attachment point
+        tailPath.lineTo(-tailLen, -tailHalfH)
+        tailPath.lineTo(-tailLen, tailHalfH)
+        tailPath.close()
+
+        canvas.drawPath(tailPath, fishPaint)
+
+        canvas.restore() // Undo tail wag
+        canvas.restore() // Undo fish rotation and translation
 
         // Draw ships
         ships.forEach { rect ->
@@ -243,9 +278,23 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
         if (!isUserTouching) {
             // Update fish position for sine wave movement
+            val oldY = fishY
             angle += frequency
             fishY = (screenHeight / 2f) + (amplitude * sin(angle)).toFloat()
+            
+            val dy = fishY - oldY
+            // Calculate rotation based on trajectory
+            // obstacleSpeed is the apparent horizontal speed
+            fishRotation = Math.toDegrees(atan2(dy.toDouble(), obstacleSpeed.toDouble())).toFloat()
+        } else {
+            // Return to 0 rotation slowly when stationary
+            if (fishRotation > 0) fishRotation -= 2f
+            if (fishRotation < 0) fishRotation += 2f
+            if (kotlin.math.abs(fishRotation) < 2f) fishRotation = 0f
         }
+
+        // Update tail wag
+        tailWagAngle += 0.2
 
         // Update ships
         ships.forEach { ship ->
